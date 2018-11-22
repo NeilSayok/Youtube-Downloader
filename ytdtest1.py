@@ -28,14 +28,24 @@ try:
     os.makedirs(path)    
     print("Directory " , path ,  " Created ")
 except FileExistsError:
-    print("Directory " , path ,  " already exists")  
+    print("Directory " , path ,  " already exists")
+
+temp = []
+
+if ',' in uri:
+    temp = uri.split(',')
+else:
+    temp.append(uri)
 
 
 arr = []
-if 'playlist' in uri:
-    arr = playlist_download(uri)
-else:
-    arr.append(uri)
+for url in temp:
+    if 'playlist' in url:
+        arr = playlist_download(url)
+    else:
+        arr.append(url)
+    
+
 
 err = []
 
