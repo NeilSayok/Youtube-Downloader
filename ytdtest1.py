@@ -1,14 +1,25 @@
 import pafy
 import requests
 import os
+import threading
+import sys
 
 
+def update_packages():
+    packages = ["pafy","requests","beautifulsoup4","youtube_dl"]
+    for package in packages:
+        os.system("pip install --upgrade "+package)
+
+ch = input("Check for Package Updates? [Y/N]") 
+
+if ch == 'y' or ch == 'Y':
+    update_packages()
+c = 1
 
 def playlist_download(url):
     from bs4 import BeautifulSoup as bs
     try:
         r = requests.get(url)
-        print("Here")
         page = r.text
         soup = bs(page, 'html.parser')
         res = soup.find_all('a', {'class': 'pl-video-title-link'})
@@ -17,11 +28,85 @@ def playlist_download(url):
     except Exception as e:
         print(e)
 
+def download_err(i):
+    global path
+    try:
+        fh1 = open(path + "done.txt","a") 
+        fh = open(path +"err.txt", "a")
+        video = pafy.new(i[0])
+        name = str(i[1]) + '. ' + video.title
+        try:
+            for p in ('|', '?', '\\', '/', ':', '*', '<', '>', '\"'):
+                 name = name.replace(p, '_')
 
+            best = video.getbest(preftype="mp4")
+            print("Downloading "+name+"...")
+            best.download(quiet=True, filepath= path + name + '.' + best.extension)
+
+            print("Done Downloading "+name)
+            fh1.write("Done : " +name+ '\n')
+            fh1.close()
+            
+
+        except Exception as e:
+            print(e +"\\"+ str(i[0])+"\\"+str(i[1])+"\\"+name)
+            fh.write('Failed : '+ name +'\n')
+            print("Error Downloading "+name)
+            fh.close()    
+            
+    except Exception as f:
+        print(f)
+        
+
+def download(i):
+    global path
+    global c
+    global threads
+    try:
+        fh1 = open(path + "done.txt","a") 
+        fh = open(path +"err.txt", "a")
+        video = pafy.new(i)
+        name = str(c) + '. ' + video.title
+        c += 1
+        try:
+            for p in ('|', '?', '\\', '/', ':', '*', '<', '>', '\"'):
+                 name = name.replace(p, '_')
+
+            best = video.getbest(preftype="mp4")
+            print("Downloading "+name+"...")
+            best.download(quiet=False, filepath= path + name + '.' + best.extension)
+            print("Done Downloading "+name)
+            fh1.write("Done : " +name+ '\n')
+            fh1.close()
+            
+
+        except Exception as e:
+            print(e +"\\"+ str(i[0])+"\\"+str(i[1])+"\\"+name)
+            c += 1
+            fh.write('Failed : '+ name +'\n')
+            print("Error Downloading "+name)
+            for _ in range(0,3):
+                t=threading.Thread(target=download_err, args=((i,c),))
+                threads.append(t)
+                t.start()
+            #err.append((i,c))
+            fh.close()    
+            
+    except Exception as f:
+        print(f)
+        c += 1
+
+
+
+
+
+
+## Variables and others
 c = 1
 
 uri = input('Input URL::')
 path = input('Enter Path ::')
+
 path =  path + '\\'
 
 try:
@@ -37,88 +122,37 @@ if ',' in uri:
 else:
     temp.append(uri)
 
-
 arr = []
 for url in temp:
     if 'playlist' in url:
         arr = playlist_download(url)
     else:
         arr.append(url)
+        
+err = []
+## Variables and others
+
+threads = []
+
+for i in arr:
+    #t=threading.Thread(target=download, args=(str(i),))
+    #threads.append(t)
+    #t.start()
+    download(i)
+    
+
+while len(threads)>0 :
+    for i in threads:
+        if not i.isAlive():
+            threads.remove(i)
+else:
+    import sort_txt_file as stf
+    stf.correct_txt(path)
+    sys.exit()
     
 
 
-err = []
-
-for i in arr:
-    try:
-        fh1 = open(path + "done.txt","a") 
-        fh = open(path +"err.txt", "a")
-        video = pafy.new(i)
-        name = str(c) + '. ' + video.title
-        try:
-            for p in ('|', '?', '\\', '/', ':', '*', '<', '>', '\"'):
-                 name = name.replace(p, '_')
-
-            best = video.getbest(preftype="mp4")
-            print("Downloading "+name+"...")
-            best.download(quiet=True, filepath= path + name + '.' + best.extension)
-            print("Done Downloading "+name)
-            fh1.write("Done : " +name+ '\n')
-            fh1.close()
-            c += 1
-
-        except Exception as e:
-            print(e)
-            err.append((i,c))
-            fh.write('Failed : '+ name +'\n')
-            print("Error Downloading "+name)
-            fh.close()    
-            c += 1
-    except Exception as f:
-        print(f)
 
 
-fh1 = open(path + "done.txt","a") 
-fh = open(path +"err.txt", "a")
-
-fh.write('=======================================================================================')
-fh1.write('=======================================================================================')
-fh.close()
-fh1.close()
-
-for _ in range(0,3):
-    if len(err) == 0:
-        break
-    else:
-        for i in err:
-            try:
-                fh1 = open(path + "done.txt","a") 
-                fh = open(path +"err.txt", "a")
-                video = pafy.new(i[0])
-                name = str(i[1]) + '. ' + video.title
-                try:
-                    for p in ('|', '?', '\\', '/', ':', '*', '<', '>', '\"'):
-                         name = name.replace(p, '_')
-
-                    best = video.getbest(preftype="mp4")
-                    print("Downloading "+name+"...")
-                    best.download(quiet=True, filepath= path + name + '.' + best.extension)
-                    print("Done Downloading "+name)
-                    err.remove(i)
-                    fh1.write("Done : " +name+ '\n')
-                    fh1.close()
-                    c += 1
-
-                except Exception as e:
-                    print(e)
-                    fh.write('Failed : '+ name +'\n')
-                    print("Error Downloading "+name)
-                    fh.close()    
-                    c += 1
-            except Exception as f:
-                print(f)
-else:
-    for k in err:
-        print(k + " "+pafy.new(k[0]).title)
 
         
